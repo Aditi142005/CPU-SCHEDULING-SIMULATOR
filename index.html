@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Scheduling Simulator</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    
+  <div class="container">
+<div id="simulatorSection" style="display:none;">
+   <button id="backHomeBtn" style="margin:10px; padding:5px 10px;">⬅ Back to Home</button>
+  <h1>CPU Scheduling Simulator</h1>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+  <th>PID</th>
+  <th>Arrival</th>
+  <th>Burst</th>
+  <th>Priority <br><small style="font-weight:normal;font-size:10px;color:#555;">Lower number = higher priority</small></th>
+</tr>
+
+    </thead>
+    <tbody id="process-tbody"></tbody>
+  </table>
+  <div style="text-align:center; margin-top:10px;">
+    <button class="btn" onclick="addRow()">Add Row</button>
+    <button class="btn secondary" onclick="removeRow()">Remove Row</button>
+    <button class="btn secondary" onclick="resetAll()">Reset</button>
+  </div>
+</div>
+
+
+
+<div class="card control-card">
+  <div style="text-align:center;">
+    <label>Algorithm: 
+      <select id="algo">
+        <option>FCFS</option>
+        <option>SJF Non-Preemptive</option>
+        <option>SJF Preemptive</option>
+        <option>Priority Non-Preemptive</option>
+        <option>Priority Preemptive</option>
+        <option>Round Robin</option>
+      </select>
+    </label>
+    <span id="quantumDiv" style="display:none;">
+      <label>Quantum: <input type="number" id="quantum" value="2"></label>
+    </span>
+  </div>
+  <div style="text-align:center; margin-top:10px;">
+    <button class="btn" id="runBtn">Run</button>
+    <button class="btn secondary" id="exportBtn">Export Results</button>
+    <button class="btn secondary" onclick="resetAll()">Reset</button>
+  </div>
+</div>
+
+
+<div class="card">
+  <canvas id="ganttChart" width="900" height="300"></canvas>
+  <div id="ganttTooltip"></div>
+</div>
+
+
+<div class="card control-card control-row" style="text-align:center;">
+  <button class="btn" id="playBtn">Play</button>
+  <button class="btn" id="pauseBtn">Pause</button>
+  <button class="btn" id="resetPlayBtn">Reset</button>
+  <button class="btn" id="stepBackBtn">Step Back</button>
+  <button class="btn" id="stepFwdBtn">Step Forward</button>
+  <button class="btn" onclick="zoomIn()">Zoom In</button>
+  <button class="btn" onclick="zoomOut()">Zoom Out</button>
+  <button class="btn" onclick="panLeft()">Pan Left</button>
+  <button class="btn" onclick="panRight()">Pan Right</button>
+</div>
+
+
+
+<div id="resultTableContainer" style="margin-top:20px;"></div>
+
+<div class="card" style="text-align:center;">
+  <canvas id="comparisonChart" width="700" height="300"></canvas>
+  <div>Best Algorithm: <span id="bestAlgo"></span></div>
+</div>
+
+
+<div class="card" id="timeComplexityDisplay" style="text-align:center; font-weight:bold; color:#e67e22;">
+  Time Complexity: Select an algorithm to see its typical time complexity.
+</div>
+
+
+<script src="script.js"></script>
+
+  </div> <!-- close container -->
+</div> 
+<div id="homeScreen" style="text-align:center; margin-top:50px;">
+  <h1>Welcome to CPU Tools</h1>
+  <button class="btn" onclick="showSection('simulator')">CPU Scheduling Simulator</button>
+  <button class="btn" onclick="showSection('notes')">Important Notes</button>
+</div>
+
+<div id="notesSection" style="display:none; padding:20px; max-width:900px; margin:auto;">
+  <h2 style="text-align:center; margin-bottom:20px;">Important Notes: CPU Scheduling Algorithms</h2>
+
+  <!-- 1. FCFS -->
+  <h3>1. First Come First Serve (FCFS)</h3>
+  <p>
+    - Non-preemptive algorithm.<br>
+    - Processes are executed in the order they arrive.<br>
+    <strong>Formulas:</strong><br>
+    Start Time (ST): ST[P1] = Arrival[P1], ST[Pi] = max(CT[previous], Arrival[Pi])<br>
+    Completion Time (CT): CT[Pi] = ST[Pi] + Burst[Pi]<br>
+    Turnaround Time (TAT): TAT[Pi] = CT[Pi] - Arrival[Pi]<br>
+    Waiting Time (WT): WT[Pi] = TAT[Pi] - Burst[Pi]<br>
+    Execution Slices: Single slice [ST → CT]
+  </p>
+  <strong>Example:</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+    <tr><td>P1</td><td>0</td><td>5</td><td>0</td><td>5</td><td>5</td><td>0</td><td>0-5</td></tr>
+    <tr><td>P2</td><td>1</td><td>3</td><td>5</td><td>8</td><td>7</td><td>4</td><td>5-8</td></tr>
+    <tr><td>P3</td><td>2</td><td>8</td><td>8</td><td>16</td><td>14</td><td>6</td><td>8-16</td></tr>
+  </table>
+  <hr>
+
+  <!-- 2. SJF Non-Preemptive -->
+  <h3>2. Shortest Job First (SJF) Non-Preemptive</h3>
+  <p>
+    - Non-preemptive algorithm.<br>
+    - Select the process with the **smallest burst time** from ready queue.<br>
+    <strong>Formulas:</strong> Same as FCFS<br>
+    Execution Slices: Single slice [ST → CT]
+  </p>
+  <strong>Example:</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+   <tr>
+  <td>P1</td>
+  <td>0</td>
+  <td>4</td>
+  <td>0</td>  <!-- ST -->
+  <td>4</td>  <!-- CT -->
+  <td>4</td>  <!-- TAT -->
+  <td>0</td>  <!-- WT -->
+  <td>0-4</td> <!-- Execution Slices -->
+</tr>
+<tr>
+  <td>P2</td>
+  <td>1</td>
+  <td>3</td>
+  <td>4</td>
+  <td>7</td>
+  <td>6</td>
+  <td>3</td>
+  <td>4-7</td>
+</tr>
+<tr>
+  <td>P3</td>
+  <td>2</td>
+  <td>1</td>
+  <td>7</td>
+  <td>8</td>
+  <td>6</td>
+  <td>5</td>
+  <td>7-8</td>
+</tr>
+
+  </table>
+  <hr>
+
+  <!-- 3. SJF Preemptive (SRTF) -->
+  <h3>3. Shortest Job First (SJF) Preemptive / Shortest Remaining Time First (SRTF)</h3>
+  <p>
+    - Preemptive algorithm.<br>
+    - At each time unit, pick the process with the **shortest remaining burst time**.<br>
+    - A new process may preempt the current process.<br>
+    <strong>Formulas:</strong> Same as FCFS<br>
+    Execution Slices: Multiple intervals depending on preemption
+  </p>
+  <strong>Example:</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+    <tr>
+  <td>P1</td>
+  <td>0</td>
+  <td>8</td>
+  <td>0</td>
+  <td>17</td>
+  <td>17</td>
+  <td>9</td>
+  <td>
+    <span style="background-color:#8ef; padding:2px;">0-1</span>,
+    <span style="background-color:#f88; padding:2px;">4-10</span>,
+    <span style="background-color:#8ef; padding:2px;">12-17</span>
+  </td>
+</tr>
+
+  </table>
+  <hr>
+
+  <!-- 4. Priority Non-Preemptive -->
+  <h3>4. Priority Scheduling Non-Preemptive</h3>
+  <p>
+    - Non-preemptive.<br>
+    - Process with **highest priority** (lowest number) executes first.<br>
+    - Execution Slices: Single slice [ST → CT]<br>
+    - Formulas: Same as FCFS
+  </p>
+  <strong>Example:</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+   <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+ <tr>
+  <td>P1</td>
+  <td>0</td>
+  <td>4</td>
+  <td>0</td>
+  <td>4</td>
+  <td>4</td>
+  <td>0</td>
+  <td>0-4</td>
+</tr>
+<tr>
+  <td>P2</td>
+  <td>1</td>
+  <td>3</td>
+  <td>4</td>
+  <td>7</td>
+  <td>6</td>
+  <td>3</td>
+  <td>4-7</td>
+</tr>
+<tr>
+  <td>P3</td>
+  <td>2</td>
+  <td>1</td>
+  <td>7</td>
+  <td>8</td>
+  <td>6</td>
+  <td>5</td>
+  <td>7-8</td>
+</tr>
+</table>
+
+  <hr>
+
+  <!-- 5. Priority Preemptive -->
+  <h3>5. Priority Scheduling Preemptive</h3>
+  <p>
+    - Preemptive version.<br>
+    - At each time unit, pick the **highest priority process**.<br>
+    - Execution Slices: Multiple intervals.<br>
+    - Formulas: Same as FCFS
+  </p>
+  <strong>Example:</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+   <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+ <tr>
+  <td>P1</td>
+  <td>0</td>
+  <td>7</td>
+  <td>0</td>
+  <td>17</td>
+  <td>17</td>
+  <td>10</td>
+  <td>
+    <span style="background-color:#8ef; padding:2px;">0-2</span>,
+    <span style="background-color:#f88; padding:2px;">5-10</span>,
+    <span style="background-color:#8ef; padding:2px;">12-17</span>
+  </td>
+</tr>
+<tr>
+  <td>P2</td>
+  <td>2</td>
+  <td>4</td>
+  <td>2</td>
+  <td>12</td>
+  <td>10</td>
+  <td>6</td>
+  <td>
+    <span style="background-color:#ffb; padding:2px;">2-5</span>,
+    <span style="background-color:#ffb; padding:2px;">10-12</span>
+  </td>
+</tr>
+<tr>
+  <td>P3</td>
+  <td>3</td>
+  <td>1</td>
+  <td>6</td>
+  <td>7</td>
+  <td>4</td>
+  <td>3</td>
+  <td>
+    <span style="background-color:#afa; padding:2px;">6-7</span>
+  </td>
+</tr>
+</table>
+  <hr>
+
+  <!-- 6. Round Robin (RR) -->
+  <h3>6. Round Robin (RR)</h3>
+  <p>
+    - Preemptive.<br>
+    - Each process executes for **time quantum** or remaining burst, whichever is smaller.<br>
+    - Unfinished processes go to end of ready queue.<br>
+    - Execution Slices: Multiple intervals.<br>
+    - Formulas: Same as FCFS, sum all slices for CT.
+  </p>
+  <strong>Example (Quantum = 2):</strong>
+  <table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+  <th title="Process ID">PID</th>
+  <th title="Arrival Time of Process">Arrival</th>
+  <th title="Burst Time of Process">Burst</th>
+  <th title="Start Time: When the process started execution">ST (first)</th>
+  <th title="Completion Time: When the process finished execution">CT</th>
+  <th title="Turnaround Time: CT - Arrival">TAT</th>
+  <th title="Waiting Time: TAT - Burst">WT</th>
+  <th title="Execution Slices: Time intervals process was executing">Execution Slices</th>
+</tr>
+
+<tr>
+  <td>P1</td>
+  <td>0</td>
+  <td>5</td>
+  <td>0</td>
+  <td>12</td>
+  <td>12</td>
+  <td>7</td>
+  <td>
+    <span style="background-color:#8ef; padding:2px;">0-2</span>,
+    <span style="background-color:#f88; padding:2px;">6-8</span>,
+    <span style="background-color:#8ef; padding:2px;">10-12</span>
+  </td>
+</tr>
+<tr>
+  <td>P2</td>
+  <td>1</td>
+  <td>3</td>
+  <td>1</td>
+  <td>10</td>
+  <td>9</td>
+  <td>6</td>
+  <td>
+    <span style="background-color:#ffb; padding:2px;">2-4</span>,
+    <span style="background-color:#ffb; padding:2px;">8-10</span>
+  </td>
+</tr>
+<tr>
+  <td>P3</td>
+  <td>2</td>
+  <td>1</td>
+  <td>2</td>
+  <td>7</td>
+  <td>5</td>
+  <td>4</td>
+  <td>
+    <span style="background-color:#afa; padding:2px;">4-5</span>,
+    <span style="background-color:#afa; padding:2px;">5-6</span>,
+    <span style="background-color:#afa; padding:2px;">6-7</span>
+  </td>
+</tr>
+</table>
+  <hr>
+<!-- Manual Calculation Checker -->
+  <div id="manualCheckContainer" style="margin-top:20px; display:none;">
+    <h3>Manual Calculation Checker</h3>
+    <div id="manualTable"></div>
+    <button class="btn" onclick="checkManualCalculations()">Check My Calculations</button>
+    <div id="manualCheckResult" style="margin-top:10px; font-weight:bold;"></div>
+  </div>
+
+  <div style="text-align:center; margin-top:20px;">
+    <button class="btn" onclick="showSection('home')">Back to Home</button>
+  </div>
+</div>
+  </body>
+</html>
