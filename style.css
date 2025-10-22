@@ -307,3 +307,56 @@ th[title]:hover::after {
   white-space: nowrap;
   z-index: 10;
 }
+
+/* ========== Deadlock Section Styles ========== */
+.deadlock-container {
+  margin: 15px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.deadlock-container input {
+  width: 120px;
+  padding: 6px;
+  text-align: center;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.matrix {
+  display: grid;
+  gap: 5px;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.matrix input {
+  width: 50px;
+  text-align: center;
+  padding: 3px;
+}
+
+.deadlock-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.deadlock-table th, .deadlock-table td {
+  border: 1px solid #333;
+  padding: 8px;
+  text-align: center;
+}
+
+.deadlock-table th {
+  background-color: #3498db;
+  color: white;
+}
+.highlight-row {
+  background-color: #ffff99;
+}
+.safe-step {
+  margin: 5px 0;
+}

@@ -297,7 +297,8 @@ function drawTimelineUpTo(processes, upToTime = null){
       if(w < 2) w = 2;
       const h = Math.max(14, Math.floor(rowHeight * 0.6));
       const rectY = y + (rowHeight - h)/2;
-      const algo = document.getElementById("algo").value;
+      const algo = document.getElementById("algoSelectSim").value;
+
 const colorPalette = algoColors[algo] || colors;
 const color = colorPalette[(p.pid - 1) % colorPalette.length];
 
@@ -459,7 +460,8 @@ function runAlgorithm(){
   if(!processes) return; // STOP if invalid inputs
 
   processes.forEach(p=>{ if(!Number.isFinite(p.arrival)) p.arrival = 0; if(!Number.isFinite(p.burst)) p.burst = 0; if(!Number.isFinite(p.priority)) p.priority = 1; p.remaining = p.burst; p.executedSlices = []; p.start = null; p.completion = null; p.turnaround = null; p.waiting = null; });
-  const algo = document.getElementById("algo").value;
+  const algo = document.getElementById("algoSelectSim").value;
+
   const quantum = parseNumberSafe(document.getElementById("quantum").value, 2);
 
   if(algo === "FCFS") fcfs(processes);
@@ -527,18 +529,15 @@ function showTimeComplexity(algoName) {
 }
 // --- Section navigation ---
 function showSection(section) {
-  const home = document.getElementById("homeScreen");
-  const sim = document.getElementById("simulatorSection");
-  const notes = document.getElementById("notesSection");
+  const sections = ['homeScreen', 'simulatorSection', 'notesSection', 'deadlockSection'];
+  sections.forEach(id => document.getElementById(id).style.display = 'none');
 
-  home.style.display = "none";
-  sim.style.display = "none";
-  notes.style.display = "none";
-
-  if(section === "home") home.style.display = "block";
-  else if(section === "simulator") sim.style.display = "block";
-  else if(section === "notes") notes.style.display = "block";
+  if (section === 'home') document.getElementById('homeScreen').style.display = 'block';
+  else if (section === 'simulator') document.getElementById('simulatorSection').style.display = 'block';
+  else if (section === 'notes') document.getElementById('notesSection').style.display = 'block';
+  else if (section === 'deadlock') document.getElementById('deadlockSection').style.display = 'block';
 }
+
 
 // Show home screen on page load
 window.onload = () => {
@@ -596,21 +595,31 @@ document.getElementById("runBtn").addEventListener("click", runAlgorithm);
 
 
 /* Call this whenever algorithm runs */
-document.getElementById("algo").addEventListener("change", ()=>{
-  const algo = document.getElementById("algo").value;
+document.getElementById("algoSelectSim").addEventListener("change", ()=>{
+  const algo = document.getElementById("algoSelectSim").value;
   showTimeComplexity(algo);
 });
-// Show/hide Quantum input only for Round Robin
-const algoSelect = document.getElementById("algo");
-const quantumDiv = document.getElementById("quantumDiv");
 
-algoSelect.addEventListener("change", () => {
-  if (algoSelect.value === "Round Robin") {
-    quantumDiv.style.display = "inline-block"; // show quantum
-  } else {
-    quantumDiv.style.display = "none"; // hide quantum
-  }
+// Show/hide Quantum input only for Round Robin
+document.addEventListener("DOMContentLoaded", () => {
+  const algoSelect = document.getElementById("algoSelectSim");
+  const quantumDiv = document.getElementById("quantumDiv");
+  const processTable = document.getElementById("processInputContainer");
+  const tbody = document.getElementById("process-tbody");
+
+  algoSelect.addEventListener("change", () => {
+    if (algoSelect.value !== "") processTable.style.display = "block";
+    else processTable.style.display = "none";
+
+    if (algoSelect.value === "RR") quantumDiv.style.display = "inline-block";
+    else quantumDiv.style.display = "none";
+
+    showTimeComplexity(algoSelect.value);
+  });
 });
+
+
+
 document.getElementById("backHomeBtn").addEventListener("click", () => {
     showSection('home');
 });
@@ -635,6 +644,25 @@ function exportResults(){
   a.click();
   URL.revokeObjectURL(url);
 }
+const algoDropdown = document.getElementById("algoSelectSim");
+const processTable = document.getElementById("processTableContainer"); // your table wrapper
+
+algoDropdown.addEventListener("change", () => {
+  if(algoDropdown.value !== ""){
+    processTable.style.display = "block";  // show table
+  } else {
+    processTable.style.display = "none";   // hide table if none selected
+  }
+
+  // Show quantum input only for Round Robin
+  const quantumDiv = document.getElementById("quantumDiv");
+  if (algoDropdown.value === "Round Robin") quantumDiv.style.display = "inline-block";
+else quantumDiv.style.display = "none";
+
+
+  // Show time complexity
+  showTimeComplexity(algoDropdown.value);
+});
 
 
 
