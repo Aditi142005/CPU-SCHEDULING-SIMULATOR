@@ -36,49 +36,69 @@ function parseNumberSafe(v, fallback=0){
 }
 
 /* ========== Process table ========== */
-function addRow(){
-  const tbody = document.getElementById("process-tbody");
-  const pid = tbody.rows.length + 1;
-  const row = tbody.insertRow();
-  row.insertCell(0).innerText = pid;
-  row.insertCell(1).innerHTML = `<input type="number" value="0">`;
-  row.insertCell(2).innerHTML = `<input type="number" value="0">`;
-  row.insertCell(3).innerHTML = `<input type="number" value="1">`;
+// REPLACE your old addRow() with this exact function
+function addRow() {
+    const tbody = document.getElementById("process-tbody");
+    const rowCount = tbody.rows.length + 1;
+    const algo = document.getElementById("algoSelectSim").value;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td>P${rowCount}</td>
+        <td><input type="number" value="0"></td>
+        <td><input type="number" value="0"></td>
+        <td class="priorityCell" style="display: ${(algo.includes("Priority")) ? "table-cell" : "none"}">
+            <input type="number" value="0">
+        </td>
+    `;
+    tbody.appendChild(tr);
 }
+
+// Add this helper to toggle Priority column visibility
+function setPriorityVisibility(show) {
+    // Header
+    document.getElementById("priorityHeader").style.display = show ? "table-cell" : "none";
+
+    // Each row
+    document.querySelectorAll("#process-tbody tr").forEach(row => {
+        const cell = row.querySelector(".priorityCell");
+        if (cell) cell.style.display = show ? "table-cell" : "none";
+    });
+}
+
+
 function removeRow(){
   const tbody = document.getElementById("process-tbody");
   if(tbody.rows.length>0) tbody.deleteRow(tbody.rows.length-1);
 }
 function resetAll() {
-  // Clear table
-  const tbody = document.getElementById("process-tbody");
-  tbody.innerHTML = "";
-  for (let i = 0; i < 3; i++) addRow();
+    const algo = document.getElementById("algoSelectSim").value;
+    const tbody = document.getElementById("process-tbody");
 
-  // Stop animation & reset Gantt state
-  if(animationRAF) cancelAnimationFrame(animationRAF);
-  isPlaying = false;
-  lastFrameTs = null;
-  lastProcesses = [];
-  slicesHit = [];
-  totalTime = 1;
-  currentPlayTime = 0;
-  viewStart = 0;
-  clearGantt();
+    // Reset all inputs in table to 0 (but keep number of rows)
+    tbody.querySelectorAll("tr").forEach(row => {
+        row.querySelectorAll("input").forEach(input => {
+            input.value = 0;
+        });
+    });
 
-  // Reset comparison chart
-  runStats = {};
-  runHistory = {};
-  if (comparisonChart) comparisonChart.destroy();
-  document.getElementById("bestAlgo").innerText = "";
+    // Show/hide priority column
+    if (algo === "Priority Non-Preemptive" || algo === "Priority Preemptive") {
+        setPriorityVisibility(true);
+    } else {
+        setPriorityVisibility(false);
+    }
 
-  // Clear results table
-  document.getElementById("resultTableContainer").innerHTML = "";
+    // Show/hide quantum input
+    document.getElementById("quantumDiv").style.display = (algo === "Round Robin") ? "inline-block" : "none";
 
-  // Reset time complexity display
-  document.getElementById("timeComplexityDisplay").innerText = 
-      "Time Complexity: Select an algorithm to see its typical time complexity.";
+    // Clear Gantt chart, result table, etc. if needed
+    const gantt = document.getElementById("ganttChart");
+    if (gantt) gantt.getContext("2d").clearRect(0, 0, gantt.width, gantt.height);
+    document.getElementById("resultTableContainer").innerHTML = "";
 }
+
+
 
 
 function getProcesses() {
@@ -588,6 +608,36 @@ function checkManualCalculations() {
 
   if (allCorrect) resultDiv.innerHTML = "All calculations are correct! 🎉";
 }
+// Ensure this runs after the DOM is ready (place it near other listeners, before initial addRow calls)
+document.addEventListener("DOMContentLoaded", () => {
+  const algoSelect = document.getElementById("algoSelectSim");
+  const quantumDiv = document.getElementById("quantumDiv");
+
+  // When algo changes -> show/hide Priority column (and quantum for RR)
+  algoSelect.addEventListener("change", () => {
+    const algo = algoSelect.value;
+
+    // Show priority only for these exact algorithm names:
+    const wantsPriority = (algo === "Priority Non-Preemptive" || algo === "Priority Preemptive");
+
+    setPriorityVisibility(wantsPriority);
+
+    // Keep quantum logic working (you already have other code, but ensure RR is handled)
+    if (algo === "Round Robin") quantumDiv.style.display = "inline-block";
+    else quantumDiv.style.display = "none";
+
+    // Also ensure process input container remains visible when algo chosen
+    const processTable = document.getElementById("processInputContainer");
+    if (algo !== "") processTable.style.display = "block";
+    else processTable.style.display = "none";
+
+    // call time complexity display if you want
+    showTimeComplexity(algo);
+  });
+
+  // Hide priority column by default on initial load
+  setPriorityVisibility(false);
+});
 
 /* ========== Initial setup ========== */
 for(let i=0;i<3;i++) addRow();
@@ -611,7 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (algoSelect.value !== "") processTable.style.display = "block";
     else processTable.style.display = "none";
 
-    if (algoSelect.value === "RR") quantumDiv.style.display = "inline-block";
+    if (algoSelect.value === "Round Robin") quantumDiv.style.display = "inline-block";
     else quantumDiv.style.display = "none";
 
     showTimeComplexity(algoSelect.value);
