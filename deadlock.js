@@ -222,8 +222,56 @@ function checkDeadlock() {
     outputDiv.innerHTML = `❌ Unsafe state / Deadlock possible!`;
   }
 }
+function drawArrow(ctx, fromX, fromY, toX, toY) {
+  const headLength = 10; // arrow size
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const angle = Math.atan2(dy, dx);
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+  // arrowhead
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+  ctx.lineTo(toX, toY);
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.fill();
+}
+function drawEdgeLabel(ctx, from, to, text, side = 'center', offset = 20) {
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.sqrt(dx*dx + dy*dy);
+
+    const nx = -dy / length; // perpendicular x
+    const ny = dx / length;  // perpendicular y
+
+    let ox = 0, oy = 0;
+
+    if (side === 'left') {
+        ox = -nx * offset;
+        oy = -ny * offset;
+    } else if (side === 'right') {
+        ox = nx * offset;
+        oy = ny * offset;
+    } // 'center' keeps ox, oy = 0
+
+    ctx.fillStyle = '#000';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, midX + ox, midY + oy);
+}
+
 
 function drawRAG() {
+  let edgeCounts = {}; // keeps track of multiple edges between same nodes
+
   const canvas = document.getElementById('ragCanvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -253,9 +301,13 @@ function drawRAG() {
     Need[p][r] = Max[p][r] - Allocation[p][r];
   });
 
+  // Define labels
+  const processes = Array.from({length: processCount}, (_, i) => 'P' + (i+1));
+  const resources = Array.from({length: resourceCount}, (_, i) => 'R' + (i+1));
+
   // Draw Processes (circles)
   const procX = 150;
-  const procYGap = canvas.height / (processCount + 1);
+  const procYGap = canvas.height / (processCount + 2);
   const procRadius = 25;
   let processPositions = [];
   for (let p = 0; p < processCount; p++) {
@@ -266,14 +318,17 @@ function drawRAG() {
     ctx.fillStyle = '#3498db';
     ctx.fill();
     ctx.stroke();
+    // Draw process label
     ctx.fillStyle = '#fff';
-    ctx.font = '14px Arial';
-    ctx.fillText('P' + p, procX - 10, y + 5);
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(processes[p], procX, y);
   }
 
   // Draw Resources (rectangles)
   const resX = 600;
-  const resYGap = canvas.height / (resourceCount + 1);
+  const resYGap = canvas.height / (resourceCount + 2);
   const resWidth = 50;
   const resHeight = 30;
   let resourcePositions = [];
@@ -283,46 +338,68 @@ function drawRAG() {
     ctx.fillStyle = '#e74c3c';
     ctx.fillRect(resX - resWidth/2, y - resHeight/2, resWidth, resHeight);
     ctx.strokeRect(resX - resWidth/2, y - resHeight/2, resWidth, resHeight);
+    // Draw resource label
     ctx.fillStyle = '#fff';
-    ctx.fillText('R' + r, resX - 10, y + 5);
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(resources[r], resX, y);
   }
 
-  // Draw Allocation Edges (R -> P)
-  ctx.strokeStyle = '#27ae60';
-  ctx.lineWidth = 2;
-  for (let p = 0; p < processCount; p++) {
-    for (let r = 0; r < resourceCount; r++) {
-      if (Allocation[p][r] > 0) {
-        let from = resourcePositions[r];
-        let to = processPositions[p];
-        ctx.beginPath();
-        ctx.moveTo(from.x - resWidth/2, from.y);
-        ctx.lineTo(to.x + procRadius, to.y);
-        ctx.stroke();
-        // Optional: label with number of allocated instances
-        ctx.fillStyle = '#000';
-        ctx.fillText(Allocation[p][r], (from.x + to.x)/2 - 5, (from.y + to.y)/2 - 5);
-      }
-    }
-  }
+// Draw Allocation Edges (R -> P)
+ctx.strokeStyle = '#0c0500ff';
+ctx.lineWidth = 2;
+for (let p = 0; p < processCount; p++) {
+  for (let r = 0; r < resourceCount; r++) {
+    if (Allocation[p][r] > 0) {
+      let from = resourcePositions[r];
+      let to = processPositions[p];
+ drawArrow(ctx, from.x - resWidth/2, from.y, to.x + procRadius, to.y);
 
-  // Draw Request Edges (P -> R)
-  ctx.strokeStyle = '#f1c40f';
-  ctx.setLineDash([5, 5]); // dashed line
-  for (let p = 0; p < processCount; p++) {
-    for (let r = 0; r < resourceCount; r++) {
-      if (Need[p][r] > 0) {
-        let from = processPositions[p];
-        let to = resourcePositions[r];
-        ctx.beginPath();
-        ctx.moveTo(from.x + procRadius, from.y);
-        ctx.lineTo(to.x - resWidth/2, to.y);
-        ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.fillText(Need[p][r], (from.x + to.x)/2, (from.y + to.y)/2 - 5);
-      }
+
+
+ // Dynamic offset
+// Allocation edge key
+let keyAlloc = `alloc-P${p}-R${r}`;
+if (!edgeCounts[keyAlloc]) edgeCounts[keyAlloc] = 0;
+let offsetAlloc = 12 + edgeCounts[keyAlloc]*12;  // shifts label perpendicular
+edgeCounts[keyAlloc]++;
+drawEdgeLabel(ctx, from, to, Allocation[p][r], 'left', 20); // left side
+
+
+
+
     }
   }
-  ctx.setLineDash([]); // reset dash
+}
+
+// Draw Request Edges (P -> R)
+ctx.strokeStyle = '#a30696ff';  // changed from yellow to dark purple
+ctx.setLineDash([5, 5]);
+for (let p = 0; p < processCount; p++) {
+  for (let r = 0; r < resourceCount; r++) {
+    if (Need[p][r] > 0) {
+      let from = processPositions[p];
+      let to = resourcePositions[r];
+   drawArrow(ctx, from.x - resWidth/2, from.y, to.x + procRadius, to.y);
+
+
+
+     // Dynamic offset
+ //Request edge key
+let keyReq = `req-P${p}-R${r}`;
+if (!edgeCounts[keyReq]) edgeCounts[keyReq] = 0;
+let offsetReq = -12 - edgeCounts[keyReq]*12;  // shifts label opposite
+edgeCounts[keyReq]++;
+drawEdgeLabel(ctx, from, to, Allocation[p][r], 'left', 20); // left side
+
+
+
+    }
+  }
+}
+ctx.setLineDash([]);
+
+
 }
 

@@ -714,6 +714,28 @@ function runWalkthrough() {
 <canvas id="ragNotesCanvas" width="700" height="300" style="border:1px solid #ccc; border-radius:10px;"></canvas>
 
 <script>
+  function drawArrow(ctx, fromX, fromY, toX, toY) {
+    const headLength = 10; // size of arrowhead
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx);
+
+    // draw line
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    // draw arrowhead
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI/6), toY - headLength * Math.sin(angle - Math.PI/6));
+    ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI/6), toY - headLength * Math.sin(angle + Math.PI/6));
+    ctx.lineTo(toX, toY);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
+}
+
 function drawRAGNotes() {
   const canvas = document.getElementById('ragNotesCanvas');
   const ctx = canvas.getContext('2d');
@@ -747,30 +769,16 @@ function drawRAGNotes() {
   });
 
   // Draw example edges
-  ctx.strokeStyle = '#e74c3c';
-  ctx.beginPath();
-  // P1 → R2 (request)
-  ctx.moveTo(pPositions[0].x, pPositions[0].y - 25);
-  ctx.lineTo(rPositions[1].x, rPositions[1].y + 25);
-  ctx.stroke();
+ ctx.strokeStyle = '#e74c3c';
+// P1 → R2 (request)
+drawArrow(ctx, pPositions[0].x, pPositions[0].y - 25, rPositions[1].x, rPositions[1].y + 25);
+// R1 → P1 (allocation)
+drawArrow(ctx, rPositions[0].x, rPositions[0].y + 25, pPositions[0].x, pPositions[0].y - 25);
+// R2 → P2 (allocation)
+drawArrow(ctx, rPositions[1].x, rPositions[1].y + 25, pPositions[1].x, pPositions[1].y - 25);
+// P2 → R1 (request)
+drawArrow(ctx, pPositions[1].x, pPositions[1].y - 25, rPositions[0].x, rPositions[0].y + 25);
 
-  // R1 → P1 (allocation)
-  ctx.beginPath();
-  ctx.moveTo(rPositions[0].x, rPositions[0].y + 25);
-  ctx.lineTo(pPositions[0].x, pPositions[0].y - 25);
-  ctx.stroke();
-
-  // R2 → P2 (allocation)
-  ctx.beginPath();
-  ctx.moveTo(rPositions[1].x, rPositions[1].y + 25);
-  ctx.lineTo(pPositions[1].x, pPositions[1].y - 25);
-  ctx.stroke();
-
-  // P2 → R1 (request)
-  ctx.beginPath();
-  ctx.moveTo(pPositions[1].x, pPositions[1].y - 25);
-  ctx.lineTo(rPositions[0].x, rPositions[0].y + 25);
-  ctx.stroke();
 
   ctx.fillStyle = '#000';
   ctx.font = '14px Arial';
